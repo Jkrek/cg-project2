@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyport Archipelago – Cube World</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header id="header">
+  <div class="title-block">
+    <h1>SKYPORT ARCHIPELAGO</h1>
+    <div class="byline">Project 2: Cube World &middot; CS5160 Computer Graphics I &middot; Jared Krekeler</div>
+    <div class="about">
+      A volcanic island chain built from one 2&times;2&times;2 cube, drawn hundreds of thousands of times.
+      Heights and colors are sampled from two PNG images; jets and a rocket fly Bézier curves under a
+      ringed gas giant, through a full day/night cycle. WebGL&nbsp;2, no libraries.
+      <a href="https://github.com/Jkrek/cg-project2" target="_blank" rel="noopener">Source</a>
+    </div>
+  </div>
+  <div class="hud" id="hud">
+    <div><span class="k">FPS</span> <span id="hudFps">–</span></div>
+    <div><span class="k">CUBES</span> <span id="hudCubes">–</span></div>
+    <div><span class="k">DRAW CALLS</span> <span id="hudCalls">–</span></div>
+    <div><span class="k">BUILD</span> <span id="hudBuild">–</span></div>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button data-level="L0"><b>0</b> Single cube</button>
+  <button data-level="L1a"><b>1a</b> Grid</button>
+  <button data-level="L1b"><b>1b</b> Heights</button>
+  <button data-level="L1c"><b>1c</b> Vertex colors</button>
+  <button data-level="L1d"><b>1d</b> Orbit camera</button>
+  <button data-level="L2"><b>2</b> Image terrain</button>
+  <button data-level="L3"><b>3</b> Skyscape</button>
+  <button data-level="L4"><b>4</b> Day &amp; night</button>
+</nav>
+
+<main>
+  <div id="viewport">
+    <canvas id="glcanvas"></canvas>
+    <div id="message"></div>
+    <div id="fallback">This project needs WebGL&nbsp;2. Try a recent Chrome, Edge, Firefox or Safari.</div>
+    <div id="clock"></div>
+  </div>
+
+  <aside id="panel">
+    <section id="desc"></section>
+
+    <!-- ===== Resolution: procedural levels ===== -->
+    <div class="group" data-show="L1a L1b L1c L1d">
+      <label>Grid resolution
+        <select id="procRes">
+          <option value="10">10 × 10 (100 cubes)</option>
+          <option value="32">32 × 32</option>
+          <option value="64" selected>64 × 64</option>
+          <option value="128">128 × 128</option>
+          <option value="256">256 × 256</option>
+          <option value="512">512 × 512 (262k cubes)</option>
+        </select>
+      </label>
+      <label>Cube size within its cell <output id="gapOut"></output>
+        <input type="range" id="gap" min="0.3" max="1" step="0.05" value="0.85" />
+      </label>
+    </div>
+
+    <div class="group" data-show="L1b L1c L1d">
+      <label>Height procedure
+        <select id="heightMode">
+          <option value="noise" selected>Fractal value noise (island)</option>
+          <option value="random">Random per cube</option>
+          <option value="ripples">Ripples: cos(distance)</option>
+        </select>
+      </label>
+      <label>Tallest cube <output id="procMaxOut"></output>
+        <input type="range" id="procMax" min="2" max="40" step="1" value="20" />
+      </label>
+      <button id="reseed" class="small">New random seed</button>
+    </div>
+
+    <div class="group" data-show="L1c">
+      <label>Vertex color procedure
+        <select id="colorMode">
+          <option value="1">Height gradient: dark bottom → color top</option>
+          <option value="2" selected>Rainbow from each corner's world position</option>
+          <option value="3">Normal direction as color</option>
+          <option value="0">One color per cube (no interpolation)</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="lit" /> Apply lighting</label>
+    </div>
+
+    <!-- ===== Image terrain (2, 3, 4) ===== -->
+    <div class="group" data-show="L2 L3 L4">
+      <label>Grid resolution
+        <select id="imgRes">
+          <option value="64">64 × 64</option>
+          <option value="128" selected>128 × 128 (default)</option>
+          <option value="200">200 × 200</option>
+          <option value="256">256 × 256</option>
+          <option value="384">384 × 384</option>
+          <option value="512">512 × 512 (needs a fast GPU)</option>
+        </select>
+      </label>
+      <p class="note">Higher resolutions draw up to 262,144 cubes and need a reasonably fast computer.</p>
+    </div>
+
+    <div class="group" data-show="L2">
+      <label>Sampling method
+        <select id="sampling">
+          <option value="box" selected>Box filter: average every pixel in the cell</option>
+          <option value="nearest">Nearest: one pixel at the cell center</option>
+        </select>
+      </label>
+      <label>Tallest cube (gray 255) <output id="maxHOut"></output>
+        <input type="range" id="maxH" min="5" max="45" step="1" value="24" />
+      </label>
+      <label>Height curve: (gray/255)<sup>k</sup>, k = <output id="curveOut"></output>
+        <input type="range" id="curve" min="0.5" max="3" step="0.1" value="1.3" />
+      </label>
+      <label>Sea level (gray value) <output id="seaOut"></output>
+        <input type="range" id="sea" min="0" max="160" step="1" value="64" />
+      </label>
+      <label>Cube size within its cell <output id="imgGapOut"></output>
+        <input type="range" id="imgGap" min="0.3" max="1" step="0.05" value="1" />
+      </label>
+      <div class="maps">
+        <figure><img id="thumbH" alt="Height map" /><figcaption>Height map</figcaption></figure>
+        <figure><img id="thumbC" alt="Color map" /><figcaption>Color map</figcaption></figure>
+      </div>
+      <label class="file">Use your own height map (PNG, grayscale) <input type="file" id="fileH" accept="image/*" /></label>
+      <label class="file">Use your own color map (PNG) <input type="file" id="fileC" accept="image/*" /></label>
+      <button id="resetMaps" class="small">Back to the archipelago images</button>
+    </div>
+
+    <!-- ===== Skyscape ===== -->
+    <div class="group" data-show="L3 L4">
+      <label>Camera
+        <select id="cameraMode">
+          <option value="orbit" selected>Orbit the island</option>
+          <option value="jet">Chase the lead jet</option>
+          <option value="rocket">Launch camera (watch the rocket)</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="showPaths" /> Show Bézier paths and control points</label>
+      <label>Subdivision flatness tolerance <output id="tolOut"></output>
+        <input type="range" id="tol" min="0.05" max="4" step="0.05" value="0.5" />
+      </label>
+      <p class="note" id="subdivInfo"></p>
+      <label class="check"><input type="checkbox" id="constantSpeed" checked /> Constant jet speed (arc-length table)</label>
+      <button id="launch" class="small">Launch the rocket now</button>
+    </div>
+
+    <!-- ===== Day and night ===== -->
+    <div class="group" data-show="L4">
+      <label>Time of day <output id="timeOut"></output>
+        <input type="range" id="timeOfDay" min="0" max="24" step="0.05" value="17.2" />
+      </label>
+      <label>Day length (seconds) <output id="dayLenOut"></output>
+        <input type="range" id="dayLen" min="20" max="240" step="5" value="90" />
+      </label>
+      <label class="check"><input type="checkbox" id="playTime" checked /> Let time pass</label>
+      <label>Wave height <output id="waveOut"></output>
+        <input type="range" id="wave" min="0" max="1.5" step="0.05" value="0.45" />
+      </label>
+      <label>Haze <output id="fogOut"></output>
+        <input type="range" id="fog" min="0" max="2" step="0.05" value="1" />
+      </label>
+    </div>
+
+    <!-- ===== Camera (all levels) ===== -->
+    <div class="group">
+      <label class="check"><input type="checkbox" id="autoOrbit" checked /> Camera orbits automatically</label>
+      <label>Orbit speed <output id="orbitSpeedOut"></output>
+        <input type="range" id="orbitSpeed" min="-0.6" max="0.6" step="0.02" value="0.12" />
+      </label>
+      <div class="row">
+        <button id="screenshot" class="small">Save screenshot</button>
+        <button id="hideUi" class="small">Hide UI (H)</button>
+      </div>
+      <p class="note">Drag to orbit · scroll to zoom · keys 0–7 switch levels · Space pauses the orbit · P shows paths</p>
+    </div>
+  </aside>
+</main>
+
+<script src="js/math.js"></script>
+<script src="js/bezier.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
