@@ -212,7 +212,7 @@ class SkyScape {
     this.rocketTimer = 2.5;
     this.rocketT = 0;
     this.planetCenter = [250, 55, -300];
-    this.debugTolerance = 0.25;
+    this.debugTolerance = 0.5;  // matches the slider's starting value
     this.showPaths = false;
   }
 
