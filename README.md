@@ -1,6 +1,6 @@
 # Skyport Archipelago – Cube World
 
-Computer Graphics I (CS5160), Project 2: Cube World. Jared Krekeler.
+Computer Graphics I - (CS5160), Project 2: Cube World. Jared Krekeler.
 
 **Live app:** https://jkrek.github.io/cg-project2/
 
